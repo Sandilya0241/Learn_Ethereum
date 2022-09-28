@@ -1,0 +1,41 @@
+Ethereum Wallet Key
+ce23b58e2f3617a03f11c028acb4f84d1b31d450d385d034bb3b76aa452e8415
+Password:
+Password@123
+
+
+0x5f543E9629769739F746c0135ed0D73A26D2CEc9
+Password@123
+
+
+ce23b58e2f3617a03f11c028acb4f84d1b31d450d385d034bb3b76aa452e8415
+answer horn flat shuffle primary embrace fantasy obvious humble ginger rural fetch
+
+
+https://www.blockchain-council.org/certifications/certified-blockchain-developer/
+
+https://app.pluralsight.com/course-player?clipId=a6e95d47-2ac8-4c5f-8ba4-6f3799006995
+
+geth --goerli --syncmode=light --http --http.addr 127.0.0.1 --http.port 12345 --http.corsdomain "*" --datadir /data --http.api="eth,net,web3,personal,txpool"
+
+
+geth --goerli --syncmode=light --http --http.addr 127.0.0.1 --http.port 12345 --http.api="eth,net,web3,personal,txpool"
+
+geth --goerli --http --http.addr localhost --http.port 8545 --http.corsdomain "*" --datadir /data --http.api="eth,net,web3,personal,txpool"
+	
+geth --goerli --http --http.api="eth,net,web3,personal,txpool,admin" --syncmode "full"
+
+
+
+
+0x40ED3BC338B32ceBFE36D647c2229B12B15A8f6E	
+lift zero hospital can antenna wage asset member monster hero ecology birth
+
+
+
+
+
+geth --rinkeby --http --http.api="eth,net,web3,personal,txpool,admin" --syncmode "light"
+geth attach http://127.0.0.1:8545
+
+0x427916d040edf914a8b3ba21dcd79321035488a8

@@ -1,0 +1,427 @@
+Create modifiers with parameters:
+
+ex:
+	contract Shop {
+		address owner; address moderator;
+		modifier onlyBy(address addr) {
+			require(addr == msg.sender);
+			_;
+		}
+		
+		function removeItem (uint itemId) onlyBy(moderator) {
+			...
+		}
+		
+		function removeContract () onlyBy(owner) {
+			...
+		}
+	}
+	
+Create multiple modifiers:
+
+ex:
+	contract Game {
+		address owner;
+		modifier isOwner() {
+			require(owner == msg.sender);
+			_;
+		}
+		
+		modifier gameStarted() {
+			require(state == States.Started);
+			_;
+		}
+		
+		function stopGame() isOwner gameStarted {
+			...
+		}
+	}
+
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+********************************************        CONTRACT INHERITANCE       **************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+
+1. The core idea of Smart Contract Inheritance is that we can create a new Smart Contract by reusing the code from another contract.
+2. This mechanism is similar to Class Inheritance in other programming languages.
+	- This inheritance mechanism in Solidity is more similar to Python Language.
+3. When we inherit a smart contract, we can:
+	- reuse code from another contract.
+	- can also add methods in the new contract definition.
+	- also redefine/ replace the methods in the contract that we inherit.
+	
+	Ex:
+	-----------------------
+	/* Parent Contract*/
+	contract Restricted {
+		function allowed(address addr) returns (bool) {
+			return true;
+		}
+		
+		function changeState() {
+			require(allowed(msg.sender));
+		}
+	}
+	
+	/*Child Contract*/
+	contract AllowsOwner is Restricted {
+		address owner;
+		function allowed(address addr) returns (bool) {
+			return addr == owner;
+		}
+	}
+	
+
+	Here in above example, changeState method in Restricted contract has a check by calling allowed method. As it returns always true, anyone can call the contract's changeState method.
+	
+	So, we do not want that behavior. We want only onwer of that smart contract to call the changeState method. So, we inherited that Restricted smart contract and overridden allowed method. This instead of sending true always, it checks whether the address received as input is same as owner address or not. Else it will send false.
+	
+	So when we are calling changeState method on AllowsOwner contract, it only allows check owner is calling this method.
+	
+
+4. We can also inherit smart contracts with construtors.
+
+	Ex:
+	-----------------------
+	contract Auction {
+		uint roundsNum;
+		constructor (uint _roundsNum) {
+			roundsNum = _roundsNum;
+		}
+	}
+	
+	contract MaxPriceAuction is Auction {
+		uint maxPrice;
+		                            +-----------+
+		constructor(uint _maxPrice) | Auction(5)|  {
+		}                           +-----------+ 
+	}                                      |
+	                                       |
+	                                       V 
+	But when defining MaxPriceAuction contract's constructor, we can just specify how to initialize fields in the Auction contract by calling the constructor for the Auction contract here.
+	
+
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+********************************************          ABSTRACT CONTRACT        **************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+
+1. Abstract contracts are contracts with one or more methods that are not defined and should be defined by the child contract that inherit them.
+2. Because of this, these contracts cannot be deployed. And only thing that we can do with them is to inherit an abstract contract and deploy a child contract.
+3. This allows us to partially define functionality in an abstract contract and provides some sort of a template or a framework for other contracts and let child contracts to define the missing bits.
+
+	Ex:
+	-----------------------
+	// cannot be deployed
+	contract ShopItem {
+		// method not defined
+		// this has implementation. No curly braces after payable which makes this contract abstract contract.
+		function pay() public payable
+	}
+	
+	// Can be deployed
+	contract SimpleItem is ShopItem {
+		function pay() public payable {
+			require(msg.value == price);
+			setOwnerShip(msg.sender);
+		}
+	}
+	
+4. When we inherit a smart contract in solidity, we may need to import a smart contract from another file. This is how to do it:
+	
+	Ex:
+	-----------------------
+	import "./ShopItem.sol";
+	
+	contract AuctionItem is ShopItem {
+		// The rest is as usual.
+	}
+
+5. Access Modifiers and Inheritance:
+	
+	+----------------------------+                      +----------------------------+
+    |       internal             |                      |          private           |
+	|     -------------          |                      |       -------------        |
+	| 1. Cannot be accessed from |                      | 1. Cannot be accessed from |
+	|     outside                |                      |     outside                |
+	| 2. Can be accessed from a  |                      | 2. Cannot be accessed from |
+	|     child contract         |                      |     a child contract       |
+	+----------------------------+                      +----------------------------+
+	
+
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+********************************************           ETHEREUM EVENTS         **************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+
+1. Event is a mechanism that allows to notify about an event in a smart contract execution.
+2. It allows clients to subscribe to those events and be notified when a particular event occurs.
+3. Smart contract events are permanently stored in the blockchain history so we can go back and read past events.
+4. The limitations of events is that contracts themselves cannot subscribe to events. Only clients that use a Web3 API can subscribe to events from smart contracts. Because the events generated by smart contracts are permanent. They can be used to store historical data and one of the reasons why this can be a good idea is because generating an event costs way less gas than writing data to a smart contract memory.
+
+To create an event:
+	Ex:
+	
+	event ItemForSale (
+		uint id,
+		uint price
+	);
+	
+	function saleItem(uint id, uint price) public {
+		emit ItemForSale(1, 4000);
+	}
+	
+5. Clients subscribing to events if they are using web3.js, they can subscribe to those events.
+	Ex:
+	
+	contract.events.ItemForSale(
+		{
+			fromBlock: 0,		// optional param
+			toBlock: 'latest'	// optional param
+		},
+		/*then we can specify a function to capture all events from block 0 to latest block.*/
+		function(error, event) {
+			console.log(event);
+		}
+	);
+	
+6. Sometimes we want to filter events based by specific value of their attributes. And to do this we need to use Index Attributes. We need to add index keyword for its field definition.
+	Ex:
+	
+	event ItemForSale (
+		uint id,
+		uint price,
+		uint indexed type
+	);
+	
+	function saleItem(uint id, uint price) public {
+		emit ItemForSale(1, 4000, 0);
+	}
+	
+	// Subscribing to those events
+	contract.events.ItemForSale(
+		{
+			filter: {type: [0, 1]},
+			fromBlock: 0,		// optional param
+			toBlock: 'latest'	// optional param
+		},
+		/*then we can specify a function to capture all events from block 0 to latest block.*/
+		function(error, event) {
+			console.log(event);
+		}
+	);
+
+*********************************************************************************************************************************
+*************************************           INTERACTIONS BETWEEN CONTRACTS         ******************************************
+*********************************************************************************************************************************
+
+1. We can have interactions between smart contracts.
+	- Smart contracts can deploy other smart contracts.
+	- Can send transactions to other smart contracts.
+	- Also can call methods on other smart contracts.
+	
+	************************************************************************************************************************
+	**************************************        CALLING OTHER CONTRACTS         ******************************************
+	************************************************************************************************************************
+	
+	- Let us say we have a smart contract for an "OnlineShop".
+	- Also we have another smart contract for a single shop item ("ShopItem").
+	- So, if we have an address of a smart contract for "ShopItem", we can create a solidity object of this smart contract similar to how we used to create a web3.js object for a smart contract.
+	- Then we need to pass the address of the smart contract we want to interact with.
+	- Then we can send a transaction to another smart contract just by calling a method.
+	
+	import "./ShopItem.sol";
+	contract OnlineShop {
+		address itemAddr = "0x123m...";
+		function sellItem() {
+			ShopItem shopItem = new ShopItem(itemAddr);
+			shopItem.startSelling();
+		}
+	}
+	
+	************************************************************************************************************************
+	************************************       DEPLOYING CONTRACT INSTANCE         *****************************************
+	************************************************************************************************************************
+	
+	- Now we don't necessarily need to have a smart contract deployed for our smart contract to interact with it.
+	- We can deploy a smart contract and to do this we need to use the new keyword and name of smart contract that we want to deploy by passing parameters there in its constructor.
+	- This will deploy an instance of "ShopItem" on the Ethereum Network and return a smart contract representation that we can interact with.
+	- Then we can send transactions to the smart contract.
+	
+	import "./ShopItem.sol";
+	contract OnlineShop {
+		function sellItem(string name, uint price) {
+			ShopItem shopItem = new ShopItem(name, price);
+			shopItem.startSelling();
+		}
+	}
+
+
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*******************************************        CONTRACT POLYMORPHISM       **************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+
+1. Interaction between smart contracts is called Polymorphism.
+2. Polymorphism is a mechanism that allows us to pass a reference to a child contract where a reference to Parent is expected.
+3. This is a powerful mechanism that allows to use child contracts bytecode that is implemented against a parent in smart contract.
+4. If we pass a reference  to a child smart contract, this code will execute methods defined in a child contract that is passed not the methods defined in a parent contract.
+	
+	Ex:
+	--------------------
+	
+	contract ShopItem {
+		function startSale(uint price);
+	}
+	
+	contract AuctionShopItem is ShopItem {
+		uint deadLine;
+		uint price;
+		
+		function startSale(uint price) {
+			deadLine = block.timestamp + 1 month;
+		}
+	}
+	
+	contract Shop {
+		ShopItem[] items;
+		function addItem(uint price) {
+			AuctionShopItem item = new AuctionShopItem();
+			items.push(item);
+		}
+		
+		function mtdSale(uint itemPos) {
+			ShopItem shopItem = items[itemPos];
+			// Calls method of AuctionShopItem
+			shopItem.startSale(price);
+		}
+	}
+	
+	In above example:
+	
+	- Let us say we have an abstract smart contract called "ShopItem" that has a single undefined method ("startSale").
+	- Then we have an implementation called "AuctionShopItem" and this smart contract implements "startSale" method.
+	- We have another smart contract called "Shop" that has an array of abstract smart contracts called "ShopItem".
+	- We have an instance of "AuctionShopItem" smart contract, we can assign this to an array with "ShopItem".
+	- Here AuctionShopItem is child and ShopItem is parent.
+	- Inside "mtdSale", we have shopItem object that points to "AuctionShopItem". And "startSale" method call on that object calls method defined in the child smart contract despite of the fact that here we have a reference of the parent smart contract type.
+	
+
+Q.) Why is this useful?
+A.) This allows us to reuse the same code that is implemented to interact with the parent smart contract. But because of this polymorphism mechanism can work with different child smart contracts. To do this we can use abstract smart contract. Sometimes abstract smart contracts that have no methods implemented.
+So, we can have smart contracts that have just method definitions and its upto child to provide the implementation.
+These smart contracts are called as Interfaces.
+
+
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*************************************************        LIBRARIES       ********************************************************            
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+*********************************************************************************************************************************
+1. So far we have implemented all code in smart contracts. But in solidity there is a way to extract some of this code outside of smart contracts so that multiple unrelated smart contracts can use this reusable code.
+2. These are called as Libraries.
+	- Library is an other type of smart contract. The main difference between a regular smart contract and a library is that library has no storage.
+	- It only has methods and has no fields.
+	- As any other smart contract, it is accessible for everybody to call this library. So, any smart contract can call this library smart contract if it is deployed on a network.
+	- One of the benefits with using library except that it allows us to extract code to a common place is libraries allows us to save gas.
+	- If we deploy library, we will pay for deployment of this piece of functionality just once and we don't need to duplicate it in other smart contracts and we don't need to pay gas for deploying this functionality again and again in other smart contracts.
+	
+	Ex:
+	--------------------
+	library NumLib {
+		// define functions in this library smart contract.
+		function negative(uint val) public returns(int) {
+			return -val;
+		}
+	}
+	
+	
+	usage of above library:
+	--------------------
+	import "./NumLib.sol";
+	
+	contract Foo {
+		using NumLib for int;
+		function mtd(int value) returns (int) {
+			return value.negative();
+			return true.negative(); // This won't work
+		}
+	}
+3. In solidity, we do not necessarily need to add methods from a library to a particular datatype.
+	Ex:
+	--------------------
+	library Utils {
+		function maxNumber(uint a, uint b) public returns(uint) {
+			return (a > b) ? a : b;
+		}
+	}
+	
+	
+	usage of above library:
+	--------------------
+	import "./Utils.sol";
+	
+	contract Foo {
+		using Utils for *;
+		function mtd(int value) returns (int) {
+			return Utils.maxNumber(5, 6);
+		}
+	}
+4. If we want to use a library with a smart contract, we cannot just compile a smart contract that uses this library. We need to link a compiled smart contract with a library that we have deployed.
+
+	Ex:
+	--------------------
+	- If we want to use a library with a smart contract, we cannot just compile a smart contract that uses this library.
+	- We also need to link a compiled smart contract with a library that we have developed.
+	- So if we have a library smart contract and its already deployed, as any smart contract it has an address.
+	
+	Smart Contract
+	+-----+																	 Library
+    |-.--.|	                                                            +---------------------+
+    |--;  |									+---------------------------| Address: 0x456...   |
+    |--.-;|									|							|---------------------|
+    +-----+									|							|Methods:             |
+       |									|							| maxNumber()         |
+       V									|							| convertToEth        |
+    Compiler								|							+---------------------+
+	   |                                    |                                    A
+	   |                                    |                                    |
+       V                                    V                                    | 
+	Unlinked------------------------------->+-----------------------------> Linked Contract 
+	Contract
+	
+	- And if we have a smart contract source code that uses this library, and we use compiler to compile this smart contract, this will produce a bytecode.
+	- This bytecode is not yet linked to the library that it depends on, which simply means that this bytecode doesn't have an address of the deployed library contract.
+	- Compiler doesn't add library addresses to the compiled bytecode. Instead it just writes placeholders where we need to provide an address of the libraries that we have deployed before.
+	- And once we replace those placeholders with the proper addresses, then we can deploy our smart contract and it will be able to use our library.
+	
+	Sample Code:
+	--------------------
+	let Utils = artifacts.require("./Utils.sol");
+	let Contract = artifacts.require("./Contract.sol");
+	
+	module.exports = async function(deployer) {
+		await deployer.deploy(Utils);
+		deployer.link(Utils, Contract);
+		
+	};
